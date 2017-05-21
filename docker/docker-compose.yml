@@ -1,0 +1,65 @@
+version: "3"
+services:
+  eurekaserver:
+    image: springcloud/eureka
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8761:8761"
+    networks:
+        - webnet
+  posAgent:
+    image: rhslee2000/eurekaclient
+    depends_on:
+      - eurekaserver
+    environment:
+      JAVA_OPTS: "-Deureka.client.serviceUrl.defaultZone=http://dockerworker.dev.nonprod.a.winning.com.au:8761/eureka/ -Dserver.port=9081 -Dspring.cloud.inetutils.preferredNetworks=10.0"
+    deploy:
+      replicas: 5
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "9081:9081"
+    networks:
+        - webnet
+  app:
+    image: rhslee2000/eurekaapp
+    depends_on:
+      - eurekaserver
+    environment:
+      JAVA_OPTS: "-Deureka.client.serviceUrl.defaultZone=http://dockerworker.dev.nonprod.a.winning.com.au:8761/eureka/ -Dserver.port=9080 -Dspring.cloud.inetutils.preferredNetworks=10.0"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "9080:9080"
+    networks:
+        - webnet
+  visualizer:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - webnet
+networks:
+    webnet:
